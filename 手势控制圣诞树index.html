@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>手势控制圣诞树</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #050b1a; color: white; text-align: center; font-family: sans-serif; }
+        #video-container { position: absolute; width: 120px; height: 90px; bottom: 10px; right: 10px; border: 2px solid #0f0; }
+        #input_video { width: 100%; height: 100%; transform: scaleX(-1); }
+        #tree { font-size: 100px; margin-top: 20vh; transition: transform 0.1s; display: inline-block; }
+        .stars { color: #ffd700; text-shadow: 0 0 10px #fff; }
+    </style>
+</head>
+<body>
+
+    <div id="status">正在加载手势模型...</div>
+    
+    <div id="tree">
+        <div class="stars">★</div>
+        🎄
+    </div>
+    <p>伸出食指，左右移动来旋转圣诞树！</p >
+
+    <div id="video-container">
+        <video id="input_video"></video>
+    </div>
+
+    <script>
+        const videoElement = document.getElementById('input_video');
+        const tree = document.getElementById('tree');
+        const status = document.getElementById('status');
+
+        function onResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                status.innerText = "🙌 已识别手势";
+                // 获取食指指尖坐标 (Landmark 8)
+                const indexFinger = results.multiHandLandmarks[0][8];
+                // 将 0-1 的坐标转换为旋转角度
+                const rotation = (indexFinger.x - 0.5) * 180;
+                tree.style.transform = `rotateY(${rotation}deg) scale(${1 + (0.5 - indexFinger.y)})`;
+            } else {
+                status.innerText = "请将手展示在摄像头前";
+            }
+        }
+
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onResults);
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({image: videoElement});
+            },
+            width: 480,
+            height: 360
+        });
+        camera.start();
+    </script>
+</body>
+</html>
